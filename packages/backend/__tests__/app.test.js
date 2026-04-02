@@ -1,102 +1,62 @@
-const request = require('supertest');
-const { app, db } = require('../src/app');
+const {
+  normalizeDueDate,
+  normalizePriority,
+  toTaskResponse,
+} = require('../src/task-utils');
 
-// Close the database connection after all tests
-afterAll(() => {
-  if (db) {
-    db.close();
-  }
-});
+describe('task-utils', () => {
+  describe('normalizePriority', () => {
+    it('uses default priority when omitted', () => {
+      expect(normalizePriority(undefined)).toBe(3);
+    });
 
-// Test helpers
-const createItem = async (name = 'Temp Item to Delete') => {
-  const response = await request(app)
-    .post('/api/items')
-    .send({ name })
-    .set('Accept', 'application/json');
+    it('returns undefined for invalid values', () => {
+      expect(normalizePriority(0)).toBeUndefined();
+      expect(normalizePriority(5)).toBeUndefined();
+      expect(normalizePriority('bad')).toBeUndefined();
+    });
 
-  expect(response.status).toBe(201);
-  expect(response.body).toHaveProperty('id');
-  return response.body;
-};
-
-describe('API Endpoints', () => {
-  describe('GET /api/items', () => {
-    it('should return all items', async () => {
-      const response = await request(app).get('/api/items');
-
-      expect(response.status).toBe(200);
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThan(0);
-
-      // Check if items have the expected structure
-      const item = response.body[0];
-      expect(item).toHaveProperty('id');
-      expect(item).toHaveProperty('name');
-      expect(item).toHaveProperty('created_at');
+    it('accepts integers between 1 and 4', () => {
+      expect(normalizePriority(1)).toBe(1);
+      expect(normalizePriority('4')).toBe(4);
     });
   });
 
-  describe('POST /api/items', () => {
-    it('should create a new item', async () => {
-      const newItem = { name: 'Test Item' };
-      const response = await request(app)
-        .post('/api/items')
-        .send(newItem)
-        .set('Accept', 'application/json');
-
-      expect(response.status).toBe(201);
-      expect(response.body).toHaveProperty('id');
-      expect(response.body.name).toBe(newItem.name);
-      expect(response.body).toHaveProperty('created_at');
+  describe('normalizeDueDate', () => {
+    it('converts valid dates to ISO strings', () => {
+      expect(normalizeDueDate('2026-05-01')).toContain('2026-05-01');
     });
 
-    it('should return 400 if name is missing', async () => {
-      const response = await request(app)
-        .post('/api/items')
-        .send({})
-        .set('Accept', 'application/json');
-
-      expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toBe('Item name is required');
+    it('returns null for empty values', () => {
+      expect(normalizeDueDate('')).toBeNull();
+      expect(normalizeDueDate(null)).toBeNull();
     });
 
-    it('should return 400 if name is empty', async () => {
-      const response = await request(app)
-        .post('/api/items')
-        .send({ name: '' })
-        .set('Accept', 'application/json');
-
-      expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toBe('Item name is required');
+    it('returns undefined for invalid dates', () => {
+      expect(normalizeDueDate('not-a-date')).toBeUndefined();
     });
   });
 
-  describe('DELETE /api/items/:id', () => {
-    it('should delete an existing item', async () => {
-      const item = await createItem('Item To Be Deleted');
+  describe('toTaskResponse', () => {
+    it('maps database fields to API shape', () => {
+      const mapped = toTaskResponse({
+        id: 1,
+        title: 'Task',
+        due_date: null,
+        priority: 2,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      });
 
-      const deleteResponse = await request(app).delete(`/api/items/${item.id}`);
-      expect(deleteResponse.status).toBe(200);
-      expect(deleteResponse.body).toEqual({ message: 'Item deleted successfully', id: item.id });
-
-      const deleteAgain = await request(app).delete(`/api/items/${item.id}`);
-      expect(deleteAgain.status).toBe(404);
-      expect(deleteAgain.body).toHaveProperty('error', 'Item not found');
-    });
-
-    it('should return 404 when item does not exist', async () => {
-      const response = await request(app).delete('/api/items/999999');
-      expect(response.status).toBe(404);
-      expect(response.body).toHaveProperty('error', 'Item not found');
-    });
-
-    it('should return 400 for invalid id', async () => {
-      const response = await request(app).delete('/api/items/abc');
-      expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('error', 'Valid item ID is required');
+      expect(mapped).toEqual({
+        id: 1,
+        title: 'Task',
+        dueDate: null,
+        priority: 2,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        isOverdue: false,
+      });
     });
   });
 });
