@@ -346,7 +346,7 @@ function App() {
         {!loading && !error && viewMode === 'matrix' && (
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
-              <Card>
+              <Card data-testid="quadrant-high-urgent">
                 <CardContent>
                   <Typography variant="subtitle1" gutterBottom>
                     Priority 1-2 and Urgent/Overdue
@@ -361,7 +361,7 @@ function App() {
               </Card>
             </Grid>
             <Grid item xs={12} md={6}>
-              <Card>
+              <Card data-testid="quadrant-high-not-urgent">
                 <CardContent>
                   <Typography variant="subtitle1" gutterBottom>
                     Priority 1-2 and Not Urgent
@@ -376,7 +376,7 @@ function App() {
               </Card>
             </Grid>
             <Grid item xs={12} md={6}>
-              <Card>
+              <Card data-testid="quadrant-normal-urgent">
                 <CardContent>
                   <Typography variant="subtitle1" gutterBottom>
                     Priority 3-4 and Urgent/Overdue
@@ -391,7 +391,7 @@ function App() {
               </Card>
             </Grid>
             <Grid item xs={12} md={6}>
-              <Card>
+              <Card data-testid="quadrant-normal-not-urgent">
                 <CardContent>
                   <Typography variant="subtitle1" gutterBottom>
                     Priority 3-4 and Not Urgent
